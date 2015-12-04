@@ -5,30 +5,32 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.messaging.MessageChannel
 import org.springframework.messaging.simp.SimpMessagingTemplate
 import org.springframework.messaging.simp.config.MessageBrokerRegistry
+import org.springframework.session.ExpiringSession
+import org.springframework.session.web.socket.config.annotation.AbstractSessionWebSocketMessageBrokerConfigurer
 import org.springframework.web.socket.config.annotation.AbstractWebSocketMessageBrokerConfigurer
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry
 
 @Configuration
 @EnableWebSocketMessageBroker
-class DefaultWebSocketConfig extends AbstractWebSocketMessageBrokerConfigurer {
+class DefaultWebSocketConfig extends AbstractSessionWebSocketMessageBrokerConfigurer<ExpiringSession> {
 
 	@Override
-	void configureMessageBroker(MessageBrokerRegistry messageBrokerRegistry) {
-		messageBrokerRegistry.enableSimpleBroker "/queue", "/topic"
-		messageBrokerRegistry.setApplicationDestinationPrefixes "/app"
+	protected void configureStompEndpoints(StompEndpointRegistry registry) {
+		registry.addEndpoint("/ws").withSockJS();
 	}
 
 	@Override
-	void registerStompEndpoints(StompEndpointRegistry stompEndpointRegistry) {
-		stompEndpointRegistry.addEndpoint("/stomp").withSockJS()
+	public void configureMessageBroker(MessageBrokerRegistry registry) {
+		registry.enableSimpleBroker("/queue/", "/topic/", "/exchange/");
+		//registry.enableStompBrokerRelay("/queue/", "/topic/", "/exchange/");
+		registry.setApplicationDestinationPrefixes("/app");
 	}
-
 	@Bean
 	GrailsSimpAnnotationMethodMessageHandler grailsSimpAnnotationMethodMessageHandler(
-		MessageChannel clientInboundChannel,
-		MessageChannel clientOutboundChannel,
-		SimpMessagingTemplate brokerMessagingTemplate
+			MessageChannel clientInboundChannel,
+			MessageChannel clientOutboundChannel,
+			SimpMessagingTemplate brokerMessagingTemplate
 	) {
 		def handler = new GrailsSimpAnnotationMethodMessageHandler(clientInboundChannel, clientOutboundChannel, brokerMessagingTemplate)
 		handler.destinationPrefixes = ["/app"]
